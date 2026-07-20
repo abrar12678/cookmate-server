@@ -9,7 +9,8 @@ function handleServerError(res: Response, error: unknown) {
 export const aiController = {
   async generateRecipe(req: Request, res: Response) {
     try {
-      const { ingredients, cuisine, outputLength, messages, followUp } = req.body;
+      const { ingredients, cuisine, outputLength, messages, followUp } =
+        req.body;
 
       const detailGuidance: Record<string, string> = {
         brief:
@@ -21,7 +22,12 @@ export const aiController = {
       };
 
       // Build conversation messages
-      const conversationMessages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = [];
+      const conversationMessages: Array<{
+        role: string;
+        content:
+          | string
+          | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+      }> = [];
 
       // System prompt
       conversationMessages.push({
@@ -35,9 +41,10 @@ export const aiController = {
         for (const msg of messages) {
           conversationMessages.push({
             role: msg.role,
-            content: typeof msg.content === "string"
-              ? msg.content.substring(0, 500)
-              : JSON.stringify(msg.content).substring(0, 500),
+            content:
+              typeof msg.content === "string"
+                ? msg.content.substring(0, 500)
+                : JSON.stringify(msg.content).substring(0, 500),
           });
         }
       }
@@ -58,7 +65,9 @@ export const aiController = {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         response_format: { type: "json_object" },
-        messages: conversationMessages as Parameters<typeof openai.chat.completions.create>["0"]["messages"],
+        messages: conversationMessages as Parameters<
+          typeof openai.chat.completions.create
+        >["0"]["messages"],
       });
 
       const raw = completion.choices[0]?.message?.content;
@@ -84,10 +93,22 @@ export const aiController = {
       res.status(200).json({
         success: true,
         data: { recipe },
-        message: followUp ? "Follow-up answered successfully" : "Recipe generated successfully",
+        message: followUp
+          ? "Follow-up answered successfully"
+          : "Recipe generated successfully",
       });
     } catch (error: unknown) {
-      handleServerError(res, error);
+      console.error("generateRecipe error:", error);
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      const status =
+        msg.includes("API key") || msg.includes("auth")
+          ? 401
+          : msg.includes("quota") || msg.includes("rate")
+            ? 429
+            : msg.includes("timeout")
+              ? 504
+              : 500;
+      res.status(status).json({ success: false, message: `AI Error: ${msg}` });
     }
   },
 
@@ -95,7 +116,12 @@ export const aiController = {
     try {
       const { imageBase64, messages, followUp } = req.body;
 
-      const conversationMessages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = [];
+      const conversationMessages: Array<{
+        role: string;
+        content:
+          | string
+          | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+      }> = [];
 
       // System prompt
       conversationMessages.push({
@@ -109,9 +135,10 @@ export const aiController = {
         for (const msg of messages) {
           conversationMessages.push({
             role: msg.role,
-            content: typeof msg.content === "string"
-              ? msg.content.substring(0, 500)
-              : JSON.stringify(msg.content).substring(0, 500),
+            content:
+              typeof msg.content === "string"
+                ? msg.content.substring(0, 500)
+                : JSON.stringify(msg.content).substring(0, 500),
           });
         }
       }
@@ -141,7 +168,9 @@ export const aiController = {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         response_format: { type: "json_object" },
-        messages: conversationMessages as Parameters<typeof openai.chat.completions.create>["0"]["messages"],
+        messages: conversationMessages as Parameters<
+          typeof openai.chat.completions.create
+        >["0"]["messages"],
       });
 
       const raw = completion.choices[0]?.message?.content;
@@ -167,10 +196,22 @@ export const aiController = {
       res.status(200).json({
         success: true,
         data: { analysis },
-        message: followUp ? "Follow-up answered successfully" : "Food analyzed successfully",
+        message: followUp
+          ? "Follow-up answered successfully"
+          : "Food analyzed successfully",
       });
     } catch (error: unknown) {
-      handleServerError(res, error);
+      console.error("analyzeFood error:", error);
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      const status =
+        msg.includes("API key") || msg.includes("auth")
+          ? 401
+          : msg.includes("quota") || msg.includes("rate")
+            ? 429
+            : msg.includes("timeout")
+              ? 504
+              : 500;
+      res.status(status).json({ success: false, message: `AI Error: ${msg}` });
     }
   },
 };

@@ -18,9 +18,19 @@ export default async function handler(
   req: import("express").Request,
   res: import("express").Response,
 ) {
-  if (!dbPromise) {
-    dbPromise = connectDB();
+  try {
+    if (!dbPromise) {
+      dbPromise = connectDB();
+    }
+    await dbPromise;
+    return app(req, res);
+  } catch (error) {
+    console.error("Serverless handler error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Server error",
+      });
+    }
   }
-  await dbPromise;
-  return app(req, res);
 }
