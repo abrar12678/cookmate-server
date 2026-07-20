@@ -15,6 +15,7 @@ interface UserDocument extends Document {
   email: string;
   password: string;
   bio?: string;
+  role?: "user" | "admin";
   createdAt?: Date;
 }
 
@@ -30,19 +31,17 @@ function errorResponse(res: Response, status: number, message: string) {
   res.status(status).json({ success: false, message });
 }
 
-/** Set JWT as httpOnly secure cookie */
 function setTokenCookie(res: Response, token: string) {
   const isProduction = env.CLIENT_URL.startsWith("https");
   res.cookie("token", token, {
     httpOnly: true,
     secure: isProduction,
     sameSite: "none",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
   });
 }
 
-/** Clear the auth cookie */
 function clearTokenCookie(res: Response) {
   const isProduction = env.CLIENT_URL.startsWith("https");
   res.cookie("token", "", {
@@ -82,6 +81,7 @@ export const authController = {
         email,
         password: hashedPassword,
         bio: "",
+        role: "user", // ← DEFAULT ROLE
         createdAt: new Date(),
       });
 
