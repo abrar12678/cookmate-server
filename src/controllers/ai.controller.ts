@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { openai } from "../config/openai";
+import env from "../config/env";
 
 function handleServerError(res: Response, error: unknown) {
   const msg = error instanceof Error ? error.message : "Unknown error";
@@ -63,7 +64,7 @@ export const aiController = {
       }
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: env.AI_MODEL,
         response_format: { type: "json_object" },
         messages: conversationMessages as Parameters<
           typeof openai.chat.completions.create
@@ -166,7 +167,7 @@ export const aiController = {
       }
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: env.AI_VISION_MODEL,
         response_format: { type: "json_object" },
         messages: conversationMessages as Parameters<
           typeof openai.chat.completions.create
