@@ -115,20 +115,15 @@ export const aiController = {
 
   async analyzeFood(req: Request, res: Response) {
     try {
-      const { imageBase64, messages, followUp } = req.body;
+      const { foodDescription, messages, followUp } = req.body;
 
-      const conversationMessages: Array<{
-        role: string;
-        content:
-          | string
-          | Array<{ type: string; text?: string; image_url?: { url: string } }>;
-      }> = [];
+      const conversationMessages: Array<{ role: string; content: string }> = [];
 
       // System prompt
       conversationMessages.push({
         role: "system",
         content:
-          "You are an autonomous Food Analysis Agent with memory. You remember previous analyses and can answer follow-up questions about the food. Use visual reasoning to identify dishes, estimate portions, deduce ingredients, and calculate nutrition. For follow-up questions, provide relevant dietary advice, substitution suggestions, or cooking tips based on the previous analysis. Return strict JSON: { dishName, cuisine, ingredients: [], nutrition: {calories, protein, carbs, fat}, suggestions: [] }.",
+          "You are an autonomous Food Analysis Agent with memory. You remember previous analyses and can answer follow-up questions about the food. Based on the user's food description, identify the dish, estimate ingredients, deduce nutrition, and provide dietary suggestions. For follow-up questions, provide relevant dietary advice, substitution suggestions, or cooking tips. Return strict JSON: { dishName, cuisine, ingredients: [], nutrition: {calories, protein, carbs, fat}, suggestions: [] }.",
       });
 
       // Previous conversation history
@@ -153,21 +148,12 @@ export const aiController = {
       } else {
         conversationMessages.push({
           role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: { url: imageBase64 },
-            },
-            {
-              type: "text",
-              text: "Analyze this food image. Identify the dish, estimate ingredients and nutrition, and provide suggestions.",
-            },
-          ],
+          content: `Analyze this food based on the description: "${foodDescription}". Identify the dish, estimate ingredients and their quantities, calculate approximate nutrition per serving, and provide 3-4 useful dietary suggestions.`,
         });
       }
 
       const completion = await openai.chat.completions.create({
-        model: env.AI_VISION_MODEL,
+        model: env.AI_MODEL,
         response_format: { type: "json_object" },
         messages: conversationMessages as Parameters<
           typeof openai.chat.completions.create

@@ -19,13 +19,9 @@ export const generateRecipeSchema = z.object({
 });
 
 export const analyzeFoodSchema = z.object({
-  imageBase64: z
+  foodDescription: z
     .string()
-    .min(1, "Image is required")
-    .refine(
-      (val) => val.startsWith("data:image"),
-      "Must be a valid base64 image string starting with data:image",
-    ),
+    .min(3, "Please describe the food (at least 3 characters)"),
   messages: z.array(chatMessage).max(20).optional(),
   followUp: z.string().optional(),
 });

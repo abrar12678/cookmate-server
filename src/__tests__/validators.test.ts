@@ -1,6 +1,13 @@
-import { registerSchema, loginSchema, updateProfileSchema } from "../validators/auth.validator";
+import {
+  registerSchema,
+  loginSchema,
+  updateProfileSchema,
+} from "../validators/auth.validator";
 import { createRecipeSchema } from "../validators/recipe.validator";
-import { generateRecipeSchema, analyzeFoodSchema } from "../validators/ai.validator";
+import {
+  generateRecipeSchema,
+  analyzeFoodSchema,
+} from "../validators/ai.validator";
 
 describe("Auth Validators", () => {
   describe("registerSchema", () => {
@@ -152,23 +159,23 @@ describe("AI Validators", () => {
   });
 
   describe("analyzeFoodSchema", () => {
-    it("should validate correct base64 image", () => {
+    it("should validate correct food description", () => {
       const result = analyzeFoodSchema.safeParse({
-        imageBase64: "data:image/png;base64,iVBOR",
+        foodDescription: "Chicken Biryani with raita",
       });
       expect(result.success).toBe(true);
     });
 
-    it("should reject non-image base64", () => {
+    it("should reject too short description", () => {
       const result = analyzeFoodSchema.safeParse({
-        imageBase64: "data:application/pdf;base64,JVBER",
+        foodDescription: "Ab",
       });
       expect(result.success).toBe(false);
     });
 
     it("should reject empty string", () => {
       const result = analyzeFoodSchema.safeParse({
-        imageBase64: "",
+        foodDescription: "",
       });
       expect(result.success).toBe(false);
     });
