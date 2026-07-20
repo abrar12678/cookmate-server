@@ -66,7 +66,7 @@ export function getDb(): Db {
  * createIndex is idempotent — safe to call on every startup.
  */
 async function ensureIndexes(database: Db): Promise<void> {
-  type IndexDef = { key: Record<string, unknown>; options: CreateIndexesOptions };
+  type IndexDef = { key: Document; options: CreateIndexesOptions };
 
   const collections: Record<string, IndexDef[]> = {
     users: [
