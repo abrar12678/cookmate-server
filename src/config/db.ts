@@ -1,4 +1,4 @@
-import { MongoClient, Db, CreateIndexesOptions, type Document } from "mongodb";
+import { MongoClient, Db, CreateIndexesOptions } from "mongodb";
 import env from "./env";
 
 const client = new MongoClient(env.MONGODB_URI);
@@ -81,39 +81,21 @@ async function ensureIndexes(database: Db): Promise<void> {
       { key: { dietaryTags: 1 }, options: { name: "recipes_dietaryTags" } },
       { key: { createdBy: 1 }, options: { name: "recipes_createdBy" } },
       // Text index for search (title + shortDescription)
-      {
-        key: { title: "text", shortDescription: "text" },
-        options: { name: "recipes_text_search" },
-      },
+      { key: { title: "text", shortDescription: "text" }, options: { name: "recipes_text_search" } },
     ],
 
     reviews: [
-      {
-        key: { recipeId: 1, userId: 1 },
-        options: { unique: true, name: "reviews_recipeId_userId_unique" },
-      },
-      {
-        key: { recipeId: 1, createdAt: -1 },
-        options: { name: "reviews_recipeId_createdAt" },
-      },
+      { key: { recipeId: 1, userId: 1 }, options: { unique: true, name: "reviews_recipeId_userId_unique" } },
+      { key: { recipeId: 1, createdAt: -1 }, options: { name: "reviews_recipeId_createdAt" } },
     ],
 
     favorites: [
-      {
-        key: { userId: 1, recipeId: 1 },
-        options: { unique: true, name: "favorites_userId_recipeId_unique" },
-      },
-      {
-        key: { userId: 1, createdAt: -1 },
-        options: { name: "favorites_userId_createdAt" },
-      },
+      { key: { userId: 1, recipeId: 1 }, options: { unique: true, name: "favorites_userId_recipeId_unique" } },
+      { key: { userId: 1, createdAt: -1 }, options: { name: "favorites_userId_createdAt" } },
     ],
 
     newsletters: [
-      {
-        key: { email: 1 },
-        options: { unique: true, name: "newsletters_email_unique" },
-      },
+      { key: { email: 1 }, options: { unique: true, name: "newsletters_email_unique" } },
     ],
 
     contacts: [
@@ -131,7 +113,7 @@ async function ensureIndexes(database: Db): Promise<void> {
         // Index may already exist with different options — log and continue
         console.warn(
           `Index creation warning (${collectionName}):`,
-          (err as Error).message,
+          (err as Error).message
         );
       }
     }
