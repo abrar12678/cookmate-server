@@ -27,7 +27,6 @@ interface RecipeDocument {
 }
 
 interface ReviewDocument {
-  _id: ObjectId;
   recipeId: ObjectId;
   userId: ObjectId;
   rating: number;

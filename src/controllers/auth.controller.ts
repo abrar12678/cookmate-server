@@ -16,7 +16,8 @@ interface UserDocument extends Document {
 
 type SafeUser = Omit<WithId<UserDocument>, "password">;
 
-function excludePassword(user: WithId<UserDocument>): SafeUser {
+function excludePassword(user: WithId<UserDocument> | null): SafeUser | null {
+  if (!user) return null;
   const { password, ...safeUser } = user;
   return safeUser as SafeUser;
 }
@@ -80,7 +81,7 @@ export const authController = {
         createdAt: new Date(),
       });
 
-      const user = await users.findOne({ _id: result.insertedId });
+      const user = await users.findOne({ _id: result.insertedId }) as WithId<UserDocument> | null;
       const token = generateToken({ id: result.insertedId.toString() });
       setTokenCookie(res, token);
 
@@ -110,7 +111,7 @@ export const authController = {
       const db = getDb();
       const users = db.collection("users");
 
-      const user = await users.findOne({ email });
+      const user = await users.findOne({ email }) as WithId<UserDocument> | null;
       if (!user) {
         errorResponse(res, 401, "Invalid email or password");
         return;
@@ -141,7 +142,7 @@ export const authController = {
       const db = getDb();
       const users = db.collection("users");
 
-      const user = await users.findOne({ _id: new ObjectId(req.userId) });
+      const user = await users.findOne({ _id: new ObjectId(req.userId) }) as WithId<UserDocument> | null;
       if (!user) {
         errorResponse(res, 404, "User not found");
         return;
@@ -180,7 +181,7 @@ export const authController = {
         { $set: updateData },
       );
 
-      const user = await users.findOne({ _id: new ObjectId(req.userId) });
+      const user = await users.findOne({ _id: new ObjectId(req.userId) }) as WithId<UserDocument> | null;
 
       res.status(200).json({
         success: true,

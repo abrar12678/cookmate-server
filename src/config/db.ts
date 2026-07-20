@@ -1,4 +1,4 @@
-import { MongoClient, Db, IndexDescription } from "mongodb";
+import { MongoClient, Db, CreateIndexesOptions } from "mongodb";
 import env from "./env";
 
 const client = new MongoClient(env.MONGODB_URI);
@@ -66,7 +66,9 @@ export function getDb(): Db {
  * createIndex is idempotent — safe to call on every startup.
  */
 async function ensureIndexes(database: Db): Promise<void> {
-  const collections: Record<string, IndexDescription[]> = {
+  type IndexDef = { key: Record<string, unknown>; options: CreateIndexesOptions };
+
+  const collections: Record<string, IndexDef[]> = {
     users: [
       { key: { email: 1 }, options: { unique: true, name: "email_unique" } },
     ],

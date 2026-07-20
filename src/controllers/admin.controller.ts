@@ -1,9 +1,15 @@
 import { Request, Response } from "express";
-import { ObjectId, Filter, Sort } from "mongodb";
+import { ObjectId, Filter, Sort, Document } from "mongodb";
 import { getDb } from "../config/db";
 
 interface AuthRequest extends Request {
   userId?: string;
+}
+
+/** Safely extract a string param (handles string | string[]) */
+function paramId(req: Request): string {
+  const v = req.params.id;
+  return Array.isArray(v) ? v[0] : v;
 }
 
 // ─── Dashboard Stats ───────────────────────────────────────
@@ -139,8 +145,9 @@ export async function getUsers(req: AuthRequest, res: Response): Promise<void> {
 export async function getUserById(req: AuthRequest, res: Response): Promise<void> {
   try {
     const db = getDb();
+    const id = paramId(req);
     const user = await db.collection("users").findOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(id) },
       { projection: { password: 0, googleId: 0 } },
     );
 
@@ -151,8 +158,8 @@ export async function getUserById(req: AuthRequest, res: Response): Promise<void
 
     // Get user's recipe count and review count
     const [recipeCount, reviewCount] = await Promise.all([
-      db.collection("recipes").countDocuments({ createdBy: req.params.id }),
-      db.collection("reviews").countDocuments({ userId: req.params.id }),
+      db.collection("recipes").countDocuments({ createdBy: new ObjectId(id) }),
+      db.collection("reviews").countDocuments({ userId: new ObjectId(id) }),
     ]);
 
     res.json({
@@ -169,6 +176,7 @@ export async function updateUserRole(req: AuthRequest, res: Response): Promise<v
   try {
     const db = getDb();
     const { role } = req.body;
+    const id = paramId(req);
 
     if (!["user", "admin"].includes(role)) {
       res.status(400).json({ success: false, message: "Invalid role. Must be 'user' or 'admin'." });
@@ -178,7 +186,7 @@ export async function updateUserRole(req: AuthRequest, res: Response): Promise<v
     const result = await db
       .collection("users")
       .findOneAndUpdate(
-        { _id: new ObjectId(req.params.id) },
+        { _id: new ObjectId(id) },
         { $set: { role, updatedAt: new Date() } },
         { returnDocument: "after", projection: { password: 0, googleId: 0 } },
       );
@@ -198,10 +206,11 @@ export async function updateUserRole(req: AuthRequest, res: Response): Promise<v
 export async function deleteUser(req: AuthRequest, res: Response): Promise<void> {
   try {
     const db = getDb();
-    const userId = new ObjectId(req.params.id);
+    const id = paramId(req);
+    const userId = new ObjectId(id);
 
     // Prevent self-deletion
-    if (req.userId && req.userId === req.params.id) {
+    if (req.userId && req.userId === id) {
       res.status(400).json({ success: false, message: "Cannot delete your own account" });
       return;
     }
@@ -215,14 +224,14 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
     // Delete user's recipes, reviews, favorites
     const recipeIds = await db
       .collection("recipes")
-      .find({ createdBy: req.params.id }, { projection: { _id: 1 } })
+      .find({ createdBy: userId }, { projection: { _id: 1 } })
       .map((r) => r._id)
       .toArray();
 
     await Promise.all([
       db.collection("users").deleteOne({ _id: userId }),
-      db.collection("reviews").deleteMany({ userId: req.params.id }),
-      db.collection("favorites").deleteMany({ userId: req.params.id }),
+      db.collection("reviews").deleteMany({ userId: userId }),
+      db.collection("favorites").deleteMany({ userId: userId }),
       ...(recipeIds.length > 0
         ? [
             db.collection("reviews").deleteMany({
@@ -231,7 +240,7 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
             db.collection("favorites").deleteMany({
               recipeId: { $in: recipeIds },
             }),
-            db.collection("recipes").deleteMany({ createdBy: req.params.id }),
+            db.collection("recipes").deleteMany({ createdBy: userId }),
           ]
         : []),
     ]);
@@ -278,7 +287,7 @@ export async function getRecipes(req: AuthRequest, res: Response): Promise<void>
     const creatorIds = [...new Set(recipes.map((r) => r.createdBy).filter(Boolean))];
     const creators = await db
       .collection("users")
-      .find({ _id: { $in: creatorIds.map((id) => new ObjectId(id)) } }, { projection: { name: 1 } })
+      .find({ _id: { $in: creatorIds.map((id) => new ObjectId(id.toString())) } }, { projection: { name: 1 } })
       .toArray();
     const creatorMap = new Map(creators.map((c) => [c._id.toString(), c.name]));
 
@@ -303,7 +312,8 @@ export async function getRecipes(req: AuthRequest, res: Response): Promise<void>
 export async function deleteRecipe(req: AuthRequest, res: Response): Promise<void> {
   try {
     const db = getDb();
-    const recipeId = new ObjectId(req.params.id);
+    const id = paramId(req);
+    const recipeId = new ObjectId(id);
 
     const recipe = await db.collection("recipes").findOne({ _id: recipeId });
     if (!recipe) {
@@ -313,8 +323,8 @@ export async function deleteRecipe(req: AuthRequest, res: Response): Promise<voi
 
     await Promise.all([
       db.collection("recipes").deleteOne({ _id: recipeId }),
-      db.collection("reviews").deleteMany({ recipeId: req.params.id }),
-      db.collection("favorites").deleteMany({ recipeId: req.params.id }),
+      db.collection("reviews").deleteMany({ recipeId }),
+      db.collection("favorites").deleteMany({ recipeId }),
     ]);
 
     res.json({ success: true, message: "Recipe and related data deleted successfully" });
@@ -327,7 +337,8 @@ export async function deleteRecipe(req: AuthRequest, res: Response): Promise<voi
 export async function toggleFeaturedRecipe(req: AuthRequest, res: Response): Promise<void> {
   try {
     const db = getDb();
-    const recipeId = new ObjectId(req.params.id);
+    const id = paramId(req);
+    const recipeId = new ObjectId(id);
 
     const recipe = await db.collection("recipes").findOne({ _id: recipeId });
     if (!recipe) {
@@ -379,13 +390,13 @@ export async function getReviews(req: AuthRequest, res: Response): Promise<void>
       recipeIds.length > 0
         ? db
             .collection("recipes")
-            .find({ _id: { $in: recipeIds.map((id) => new ObjectId(id)) } }, { projection: { title: 1 } })
+            .find({ _id: { $in: recipeIds.map((id) => new ObjectId(id.toString())) } }, { projection: { title: 1 } })
             .toArray()
         : [],
       userIds.length > 0
         ? db
             .collection("users")
-            .find({ _id: { $in: userIds.map((id) => new ObjectId(id)) } }, { projection: { name: 1 } })
+            .find({ _id: { $in: userIds.map((id) => new ObjectId(id.toString())) } }, { projection: { name: 1 } })
             .toArray()
         : [],
     ]);
@@ -396,7 +407,7 @@ export async function getReviews(req: AuthRequest, res: Response): Promise<void>
     const enriched = reviews.map((r) => ({
       ...r,
       recipeTitle: recipeMap.get(r.recipeId?.toString()) || "Deleted Recipe",
-      userName: r.userName || userMap.get(r.userId?.toString()) || "Unknown User",
+      userName: (r as Record<string, unknown>).userName as string | undefined || userMap.get(r.userId?.toString()) || "Unknown User",
     }));
 
     res.json({
@@ -415,16 +426,14 @@ export async function getReviews(req: AuthRequest, res: Response): Promise<void>
 export async function deleteReview(req: AuthRequest, res: Response): Promise<void> {
   try {
     const db = getDb();
-    const result = await db.collection("reviews").deleteOne({ _id: new ObjectId(req.params.id) });
+    const id = paramId(req);
+    const result = await db.collection("reviews").deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       res.status(404).json({ success: false, message: "Review not found" });
       return;
     }
 
-    // Recalculate recipe rating
-    const review = result as unknown as { recipeId?: string };
-    // We need the recipeId from before deletion — fetch from params context
     res.json({ success: true, message: "Review deleted successfully" });
   } catch (error) {
     console.error("Admin delete review error:", error);
@@ -469,7 +478,8 @@ export async function getNewsletters(req: AuthRequest, res: Response): Promise<v
 export async function deleteNewsletter(req: AuthRequest, res: Response): Promise<void> {
   try {
     const db = getDb();
-    const result = await db.collection("newsletters").deleteOne({ _id: new ObjectId(req.params.id) });
+    const id = paramId(req);
+    const result = await db.collection("newsletters").deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       res.status(404).json({ success: false, message: "Newsletter subscription not found" });
@@ -513,7 +523,8 @@ export async function getContacts(req: AuthRequest, res: Response): Promise<void
 export async function deleteContact(req: AuthRequest, res: Response): Promise<void> {
   try {
     const db = getDb();
-    const result = await db.collection("contacts").deleteOne({ _id: new ObjectId(req.params.id) });
+    const id = paramId(req);
+    const result = await db.collection("contacts").deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
       res.status(404).json({ success: false, message: "Contact message not found" });

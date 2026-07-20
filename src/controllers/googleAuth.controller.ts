@@ -88,7 +88,7 @@ export const googleAuthController = {
       `https://accounts.google.com/o/oauth2/v2/auth?` +
       new URLSearchParams({
         client_id: env.GOOGLE_CLIENT_ID,
-        redirect_uri,
+        redirect_uri: redirectUri,
         response_type: "code",
         scope: "openid email profile",
         access_type: "offline",
