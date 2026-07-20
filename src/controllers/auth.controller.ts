@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { getDb } from "../config/db";
-import { registerSchema, loginSchema, updateProfileSchema } from "../validators/auth.validator";
+import {
+  registerSchema,
+  loginSchema,
+  updateProfileSchema,
+} from "../validators/auth.validator";
 import { generateToken } from "../utils/jwt";
 import { hashPassword, comparePassword } from "../utils/password";
 import { ObjectId, WithId, Document } from "mongodb";
@@ -32,7 +36,7 @@ function setTokenCookie(res: Response, token: string) {
   res.cookie("token", token, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax",
+    sameSite: "none",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: "/",
   });
@@ -44,7 +48,7 @@ function clearTokenCookie(res: Response) {
   res.cookie("token", "", {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax",
+    sameSite: "none",
     maxAge: 0,
     path: "/",
   });
@@ -81,13 +85,15 @@ export const authController = {
         createdAt: new Date(),
       });
 
-      const user = await users.findOne({ _id: result.insertedId }) as WithId<UserDocument> | null;
+      const user = (await users.findOne({
+        _id: result.insertedId,
+      })) as WithId<UserDocument> | null;
       const token = generateToken({ id: result.insertedId.toString() });
       setTokenCookie(res, token);
 
       res.status(201).json({
         success: true,
-        data: { user: excludePassword(user) },
+        data: { user: excludePassword(user), token },
         message: "Registration successful",
       });
     } catch (error: unknown) {
@@ -111,7 +117,9 @@ export const authController = {
       const db = getDb();
       const users = db.collection("users");
 
-      const user = await users.findOne({ email }) as WithId<UserDocument> | null;
+      const user = (await users.findOne({
+        email,
+      })) as WithId<UserDocument> | null;
       if (!user) {
         errorResponse(res, 401, "Invalid email or password");
         return;
@@ -128,7 +136,7 @@ export const authController = {
 
       res.status(200).json({
         success: true,
-        data: { user: excludePassword(user) },
+        data: { user: excludePassword(user), token },
         message: "Login successful",
       });
     } catch (error: unknown) {
@@ -142,7 +150,9 @@ export const authController = {
       const db = getDb();
       const users = db.collection("users");
 
-      const user = await users.findOne({ _id: new ObjectId(req.userId) }) as WithId<UserDocument> | null;
+      const user = (await users.findOne({
+        _id: new ObjectId(req.userId),
+      })) as WithId<UserDocument> | null;
       if (!user) {
         errorResponse(res, 404, "User not found");
         return;
@@ -181,7 +191,9 @@ export const authController = {
         { $set: updateData },
       );
 
-      const user = await users.findOne({ _id: new ObjectId(req.userId) }) as WithId<UserDocument> | null;
+      const user = (await users.findOne({
+        _id: new ObjectId(req.userId),
+      })) as WithId<UserDocument> | null;
 
       res.status(200).json({
         success: true,
