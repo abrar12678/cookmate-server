@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { ObjectId, Filter, Sort, Document } from "mongodb";
 import { getDb } from "../config/db";
+import { escapeRegex } from "../utils/string.utils";
 
 interface AuthRequest extends Request {
   userId?: string;
@@ -104,9 +105,10 @@ export async function getUsers(req: AuthRequest, res: Response): Promise<void> {
 
     const filter: Filter<Document> = {};
     if (search) {
+      const safeSearch = escapeRegex(search);
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -267,9 +269,10 @@ export async function getRecipes(req: AuthRequest, res: Response): Promise<void>
 
     const filter: Filter<Document> = {};
     if (search) {
+      const safeSearch = escapeRegex(search);
       filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { shortDescription: { $regex: search, $options: "i" } },
+        { title: { $regex: safeSearch, $options: "i" } },
+        { shortDescription: { $regex: safeSearch, $options: "i" } },
       ];
     }
     if (cuisine) filter.cuisine = cuisine;
@@ -452,7 +455,7 @@ export async function getNewsletters(req: AuthRequest, res: Response): Promise<v
 
     const filter: Filter<Document> = {};
     if (search) {
-      filter.email = { $regex: search, $options: "i" };
+      filter.email = { $regex: escapeRegex(search), $options: "i" };
     }
 
     const skip = (page - 1) * limit;

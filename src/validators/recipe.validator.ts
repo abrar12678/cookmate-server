@@ -26,6 +26,7 @@ export const createRecipeSchema = z.object({
   servings: z.number(),
   image: z
     .string()
-    .transform((v) => (v.trim() === "" ? undefined : v))
+    .optional()
+    .transform((v) => (v && v.trim() !== "" ? v : undefined))
     .pipe(z.string().url().optional()),
 });

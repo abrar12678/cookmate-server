@@ -2,53 +2,8 @@ import { Request, Response } from "express";
 import { getDb } from "../config/db";
 import { ObjectId } from "mongodb";
 import { createRecipeSchema } from "../validators/recipe.validator";
-
-/* ──────────────────────────────────────────────
-   MongoDB Document Types (server-side)
-   ────────────────────────────────────────────── */
-
-interface RecipeDocument {
-  _id: ObjectId;
-  title: string;
-  shortDescription: string;
-  fullDescription: string;
-  image?: string;
-  cuisine: string;
-  difficulty: string;
-  cookingTime: number;
-  servings: number;
-  ingredients: Array<{ name: string; qty: string; unit: string }>;
-  instructions: string[];
-  dietaryTags?: string[];
-  rating: number;
-  reviewCount: number;
-  createdBy: ObjectId;
-  createdAt: Date;
-}
-
-interface ReviewDocument {
-  recipeId: ObjectId;
-  userId: ObjectId;
-  rating: number;
-  review: string;
-  createdAt: Date;
-}
-
-interface FavoriteDocument {
-  _id: ObjectId;
-  userId: ObjectId;
-  recipeId: ObjectId;
-  createdAt: Date;
-}
-
-function errorResponse(res: Response, status: number, message: string) {
-  res.status(status).json({ success: false, message });
-}
-
-/** Escape special regex characters to prevent ReDoS / $expr injection */
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+import { escapeRegex } from "../utils/string.utils";
+import type { RecipeDocument, ReviewDocument, FavoriteDocument } from "../types/recipe";
 
 function toSafeId(doc: { _id: ObjectId }): string {
   return doc._id.toString();
@@ -280,7 +235,10 @@ export const recipeController = {
         return;
       }
 
-      if (recipe.createdBy.toString() !== req.userId) {
+      const isOwner = recipe.createdBy.toString() === req.userId;
+      const isAdmin = req.userRole === "admin";
+
+      if (!isOwner && !isAdmin) {
         errorResponse(res, 403, "Forbidden: You do not own this recipe");
         return;
       }
@@ -331,7 +289,10 @@ export const recipeController = {
         return;
       }
 
-      if (recipe.createdBy.toString() !== req.userId) {
+      const isOwner = recipe.createdBy.toString() === req.userId;
+      const isAdmin = req.userRole === "admin";
+
+      if (!isOwner && !isAdmin) {
         errorResponse(res, 403, "Forbidden: You do not own this recipe");
         return;
       }

@@ -149,7 +149,7 @@ export const googleAuthController = {
       }
 
       // Generate JWT and set cookie
-      const token = generateToken({ id: (user._id as ObjectId).toString() });
+      const token = generateToken({ id: (user._id as ObjectId).toString(), role: (user as Record<string, unknown>).role as string || "user" });
       setTokenCookie(res, token);
 
       // Redirect back to client

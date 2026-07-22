@@ -88,7 +88,7 @@ export const authController = {
       const user = (await users.findOne({
         _id: result.insertedId,
       })) as WithId<UserDocument> | null;
-      const token = generateToken({ id: result.insertedId.toString() });
+      const token = generateToken({ id: result.insertedId.toString(), role: user?.role || "user" });
       setTokenCookie(res, token);
 
       res.status(201).json({
@@ -131,7 +131,7 @@ export const authController = {
         return;
       }
 
-      const token = generateToken({ id: user._id.toString() });
+      const token = generateToken({ id: user._id.toString(), role: user.role || "user" });
       setTokenCookie(res, token);
 
       res.status(200).json({

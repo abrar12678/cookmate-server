@@ -35,8 +35,9 @@ export function authenticate(
   }
 
   try {
-    const decoded = verifyToken(token);
-    req.userId = (decoded as { id: string }).id;
+    const decoded = verifyToken(token) as { id: string; role?: string };
+    req.userId = decoded.id;
+    req.userRole = decoded.role;
     next();
   } catch {
     res
